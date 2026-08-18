@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Sourcing Buddy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true">
+    <span class="breath-light"></span>
+    <span class="blob b1"></span>
+    <span class="blob b2"></span>
+    <span class="blob b3"></span>
+  </div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="wordmark" role="img" aria-label="AI Sourcing">
+        <span class="wm-ai">AI</span><span class="wm-sourcing"> Sourcing</span><span class="wm-dot"></span>
+      </div>
+      <div class="brand-text">
+        <h1 class="visually-hidden">AI Sourcing Buddy</h1>
+        <p class="brand-sub">陌生岗位，也能快速上手</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="archive-switcher">
+        <span class="archive-drop-label">需求档案</span>
+        <button id="archiveTrigger" class="archive-current" type="button">
+          <span id="archiveCurrentName">未命名需求</span>
+          <span class="archive-caret">▾</span>
+        </button>
+        <div id="archiveMenu" class="archive-menu hidden">
+          <div class="archive-menu-title">切换需求</div>
+          <div id="archiveMenuList"></div>
+        </div>
+      </div>
+      <button id="btnNewArchive" class="btn btn-primary btn-sm">＋ 新建</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>功能模块</h2>
+      </div>
+      <nav class="side-nav">
+        <button class="tab active" data-tab="profile">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span> 人才画像
+        </button>
+        <button class="tab" data-tab="search">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span> 搜索指令
+        </button>
+        <button class="tab" data-tab="candidates">
+          <span class="nav-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg></span> 候选人
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="side-group">
+          <div class="side-group-label">数据管理</div>
+          <button id="btnExportAll" class="btn btn-ghost btn-sm">导出数据</button>
+          <button id="btnImportAll" class="btn btn-ghost btn-sm">导入数据</button>
+        </div>
+        <div class="side-group">
+          <div class="side-group-label">通用</div>
+          <button id="btnSettings" class="btn btn-ghost btn-sm">设置</button>
+          <span class="offline-badge">本地离线</span>
+        </div>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="archive-header">
+        <input id="archiveName" class="archive-title" type="text" placeholder="需求名称">
+        <button id="btnDeleteArchive" class="btn btn-ghost btn-sm">删除当前需求</button>
+      </div>
+
+      <!-- ======== 画像页 ======== -->
+      <div id="tab-profile" class="tab-panel active">
+        <div class="card">
+          <div class="card-head">
+            <h3>粘贴 JD</h3>
+            <span class="hint">支持中文 / 英文，复制粘贴即可</span>
+          </div>
+          <textarea id="jdInput" rows="10" placeholder="把招聘 JD 粘贴到这里，然后点击“AI 解析 JD”…"></textarea>
+          <div class="row">
+            <button id="btnParseJd" class="btn btn-primary">AI 解析 JD</button>
+            <button id="btnClearJd" class="btn btn-ghost">清空</button>
+          </div>
+          <p class="hint">JD 解析由 AI 完成（需联网），失败时自动退回规则解析兜底。</p>
+          <div id="confirmChecklist" class="tip-box hidden"></div>
+        </div>
+
+        <div id="profileEditor" class="card hidden">
+          <div class="card-head">
+            <h3>人才画像</h3>
+            <span class="hint">解析结果为草稿，请逐项确认、补充，这决定搜索指令和评分的质量</span>
+          </div>
+          <div class="grid-2">
+            <label>岗位名称（中文）
+              <input id="pTitleZh" type="text" placeholder="例：销售经理">
+            </label>
+            <label>岗位名称（英文）
+              <input id="pTitleEn" type="text" placeholder="例：Sales Manager">
+            </label>
+          </div>
+          <div class="field">
+            <label>岗位别名（搜索时常见的其他叫法）</label>
+            <div id="pAliases" class="chips"></div>
+          </div>
+          <div class="field">
+            <label>必备条件（关键词，评分时会重点核对）</label>
+            <div id="pMust" class="chips"></div>
+          </div>
+          <div class="field">
+            <label>加分条件（有则更好，不强制）</label>
+            <div id="pNice" class="chips"></div>
+          </div>
+          <div class="grid-4">
+            <label>经验下限（年）
+              <input id="pYearsMin" type="number" min="0" max="40" placeholder="3">
+            </label>
+            <label>经验上限（年）
+              <input id="pYearsMax" type="number" min="0" max="40" placeholder="8">
+            </label>
+            <label>学历要求
+              <select id="pEdu">
+                <option value="">不限</option>
+                <option value="大专">大专及以上</option>
+                <option value="本科">本科及以上</option>
+                <option value="硕士">硕士及以上</option>
+                <option value="博士">博士</option>
+              </select>
+            </label>
+            <label>工作地点
+              <input id="pLocation" type="text" placeholder="例：上海 / 远程 / 海外">
+            </label>
+          </div>
+          <p id="yearsNote" class="hint"></p>
+          <div class="grid-2">
+            <label>行业
+              <input id="pIndustry" type="text" placeholder="例：企业服务 / SaaS">
+            </label>
+            <label>目标公司池（逗号分隔）
+              <input id="pCompanies" type="text" placeholder="例：Salesforce, SAP, 用友, 金蝶">
+            </label>
+          </div>
+          <p id="companiesHint" class="hint">目标公司池可留空；留空时搜索指令和评分会跳过公司维度（建议填写对标公司，效果更好）。</p>
+          <div class="field">
+            <label>排除词（不想搜到的人群 / 公司，可选）</label>
+            <div id="pExclude" class="chips"></div>
+          </div>
+          <div class="row">
+            <button id="btnSaveProfile" class="btn btn-primary">保存画像</button>
+            <button id="btnGoSearch" class="btn btn-accent">生成搜索指令 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======== 搜索页 ======== -->
+      <div id="tab-search" class="tab-panel">
+        <div id="searchEmpty" class="empty-state">
+          <p>还没有可用的画像。</p>
+          <p class="hint">先到「人才画像」页解析 JD 并保存画像，再回来生成搜索指令。</p>
+        </div>
+        <div id="searchContent" class="hidden">
+          <div class="card">
+            <div class="card-head">
+              <h3>关键词变体</h3>
+              <span class="hint">搜索时实际使用的词，可自行增删</span>
+            </div>
+            <div id="variantChips" class="chips"></div>
+            <button id="btnAddVariant" class="btn btn-ghost btn-sm">＋ 补充关键词</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>人才梯队搜索策略</h3>
+              <span class="hint">从精准到宽泛的四层漏斗：先打第一梯队，搜完一批再逐层放宽</span>
+            </div>
+            <div id="tierCards" class="tier-grid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>通用搜索指令</h3>
+              <span class="hint">中文版用于国内渠道，英文版用于海外渠道</span>
+            </div>
+            <div id="generalBooleans"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>渠道使用说明</h3>
+              <span class="hint">每个渠道的语法、限制与替代方案（具体搜索词见上方梯队）</span>
+            </div>
+            <div id="channelCards" class="channel-grid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>渠道策略建议</h3>
+              <span class="hint">先搜哪个渠道、怎么组合，照着做就行</span>
+            </div>
+            <div id="strategyTips"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>指令历史</h3>
+              <span class="hint">每次生成都会留痕，方便回溯</span>
+            </div>
+            <div id="historyList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======== 候选人页 ======== -->
+      <div id="tab-candidates" class="tab-panel">
+        <div id="candEmpty" class="empty-state">
+          <p>这个需求还没有候选人。</p>
+          <p class="hint">粘贴简历或上传 PDF，工具会自动解析、评分并排序。</p>
+          <div class="row" style="justify-content:center;">
+            <button id="btnAddCandidateEmpty" class="btn btn-primary">＋ 添加候选人</button>
+            <button id="btnUploadResumeEmpty" class="btn btn-accent">上传简历 PDF</button>
+          </div>
+        </div>
+        <div id="candContent" class="hidden">
+          <div class="card">
+            <div class="row wrap">
+              <button id="btnAddCandidate" class="btn btn-primary">＋ 添加候选人</button>
+              <button id="btnUploadResume" class="btn btn-ghost">上传简历 PDF</button>
+              <button id="btnExportCsv" class="btn btn-ghost">导出对比表 (CSV)</button>
+              <button id="btnRecalcAll" class="btn btn-ghost">重新评分全部</button>
+              <button id="btnAiScoreAll" class="btn btn-accent">AI 评分全部</button>
+              <label class="inline-check"><input type="checkbox" id="showRemoved"> 显示已剔除</label>
+              <span class="spacer"></span>
+              <label class="inline-label">排序：
+                <select id="sortSelect">
+                  <option value="total">综合分</option>
+                  <option value="skill">职能匹配</option>
+                  <option value="performance">业绩成果</option>
+                  <option value="industry">行业经验</option>
+                  <option value="experience">经验年限</option>
+                  <option value="createdAt">添加时间</option>
+                </select>
+              </label>
+            </div>
+            <div id="priorityTip" class="tip-box"></div>
+            <div class="weight-panel">
+              <div class="weight-head">
+                <h4>评分权重（可调，改动后自动重算）</h4>
+                <button id="btnResetWeights" class="btn btn-ghost btn-sm">恢复默认</button>
+              </div>
+              <div id="weightInputs" class="weight-grid"></div>
+            </div>
+            <div class="table-wrap">
+              <table id="candidateTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>候选人</th>
+                    <th>职能</th>
+                    <th>业绩</th>
+                    <th>行业</th>
+                    <th>公司</th>
+                    <th>经验</th>
+                    <th>学历</th>
+                    <th>综合分</th>
+                    <th>标记</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======== 添加候选人弹窗 ======== -->
+  <div id="modalAddCandidate" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-head">
+        <h3>添加候选人</h3>
+        <button class="modal-close" data-close="modalAddCandidate">×</button>
+      </div>
+      <div class="modal-body">
+        <label>粘贴简历文本（中文 / 英文）</label>
+        <textarea id="addText" rows="8" placeholder="从简历复制全文粘贴到这里；也可以直接上传 PDF…"></textarea>
+        <div class="row">
+          <label class="btn btn-ghost btn-sm file-btn">上传 PDF
+            <input type="file" id="addFile" accept=".pdf,application/pdf" hidden>
+          </label>
+          <span id="addFileLabel" class="hint">未选择文件</span>
+          <button id="btnParseResume" class="btn btn-primary btn-sm">解析简历</button>
+        </div>
+        <p class="hint">扫描件 / 图片型 PDF 会自动 OCR 识别（首次需联网下载模型，多页文件需要一些时间，可能有少量错字，可手动修正）。</p>
+        <div id="addPreview" class="preview hidden">
+          <div class="grid-2">
+            <label>姓名 <input id="addName" type="text"></label>
+            <label>当前职位 <input id="addTitle" type="text"></label>
+          </div>
+          <div class="grid-2">
+            <label>公司 <input id="addCompany" type="text"></label>
+            <label>经验年限 <input id="addYears" type="number" min="0" max="60"></label>
+          </div>
+          <div class="grid-2">
+            <label>学历 <input id="addEdu" type="text"></label>
+            <label>行业 <input id="addIndustry" type="text"></label>
+          </div>
+          <div class="field">
+            <label>主要技能 / 能力词</label>
+            <div id="addSkills" class="chips"></div>
+          </div>
+        </div>
+        <div id="aiScorePreview" class="preview hidden">
+          <h4>AI 评分预览</h4>
+          <div id="aiScoreGrid" class="ai-score-grid"></div>
+          <p id="aiScoreNote" class="hint"></p>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close="modalAddCandidate">取消</button>
+        <button id="btnAddConfirm" class="btn btn-primary">加入 Pipeline 并分析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 候选人详情弹窗 ======== -->
+  <div id="modalCandidate" class="modal hidden">
+    <div class="modal-box wide">
+      <div class="modal-head">
+        <h3 id="cNameHead">候选人分析报告</h3>
+        <span id="aiBadge" class="ch-tag hidden">AI 深度分析</span>
+        <button class="modal-close" data-close="modalCandidate">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="report-grid">
+          <div class="report-left">
+            <div class="info-grid">
+              <div><span>当前职位</span><b id="cTitle"></b></div>
+              <div><span>公司</span><b id="cCompany"></b></div>
+              <div><span>经验年限</span><b id="cYears"></b></div>
+              <div><span>学历</span><b id="cEdu"></b></div>
+              <div><span>行业</span><b id="cIndustry"></b></div>
+              <div class="score-cell"><span>综合分</span><b id="cTotal" class="score-big"></b></div>
+            </div>
+            <h4>六维评分</h4>
+            <canvas id="radarCanvas" width="300" height="300"></canvas>
+            <div id="scoreBars"></div>
+            <details id="aiEvidenceBox" class="hidden">
+              <summary>AI 评分依据</summary>
+              <ul id="aiEvidenceList" class="ask-list"></ul>
+            </details>
+          </div>
+          <div class="report-right">
+            <div class="report-section" id="aiSummarySection" style="display:none;">
+              <h4>AI 总结</h4>
+              <div id="aiSummaryBox" class="suggestion"></div>
+            </div>
+            <div class="report-section">
+              <h4>亮点</h4>
+              <ul id="highlightList" class="good-list"></ul>
+            </div>
+            <div class="report-section">
+              <h4>顾虑</h4>
+              <ul id="concernList" class="warn-list"></ul>
+            </div>
+            <div class="report-section">
+              <h4>待核实问题</h4>
+              <ul id="questionList" class="ask-list"></ul>
+            </div>
+            <div class="report-section">
+              <h4>沟通建议</h4>
+              <div id="suggestionBox" class="suggestion"></div>
+            </div>
+            <details>
+              <summary>查看原始简历</summary>
+              <pre id="cRaw" class="raw-text"></pre>
+            </details>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button id="btnDeleteCandidate" class="btn btn-danger">从列表中移除</button>
+        <span class="spacer"></span>
+        <button id="btnAiAnalyze" class="btn btn-accent">AI 深度分析</button>
+        <button id="btnAiRescore" class="btn btn-ghost">AI 重新评分</button>
+        <button id="btnReanalyze" class="btn btn-ghost">重新分析</button>
+        <button class="btn btn-primary" data-close="modalCandidate">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== 设置弹窗 ======== -->
+  <div id="modalSettings" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>设置</h3>
+        <button class="modal-close" data-close="modalSettings">×</button>
+      </div>
+      <div class="modal-body">
+        <h4>评分权重</h4>
+        <div id="weightInputsSettings" class="weight-grid"></div>
+        <p id="weightSum" class="hint"></p>
+        <hr>
+        <h4>AI 深度分析</h4>
+        <label class="inline-check" style="margin-bottom:12px;">
+          <input type="checkbox" id="aiEnabled"> 启用 AI 深度分析
+        </label>
+        <div class="grid-2">
+          <label>接口地址（OpenAI 兼容）
+            <input id="aiBaseUrl" type="text" placeholder="https://api.deepseek.com/v1">
+          </label>
+          <label>模型名
+            <input id="aiModel" type="text" placeholder="deepseek-v4-flash">
+          </label>
+        </div>
+        <label>API Key（只保存在本机浏览器）
+          <input id="aiApiKey" type="password" placeholder="sk-...">
+        </label>
+        <p class="hint">已内置 DeepSeek 配置，默认直接可用；如需更换其他模型或接口，修改后保存即可。</p>
+        <div class="row">
+          <button id="btnAiTest" class="btn btn-ghost btn-sm">测试连接</button>
+          <span id="aiTestResult" class="hint"></span>
+        </div>
+        <p class="hint">启用后，JD 解析、简历解析与评分都由 AI 完成（每份简历约消耗一次调用）；AI 不可用时自动退回规则解析。所有数据都会发送到你填写的接口。</p>
+        <hr>
+        <h4>数据管理</h4>
+        <div class="row wrap">
+          <button id="btnExportAll2" class="btn btn-ghost btn-sm">导出全部数据</button>
+          <button id="btnImportAll2" class="btn btn-ghost btn-sm">导入数据</button>
+          <button id="btnRestoreDemo" class="btn btn-ghost btn-sm">恢复示例案例</button>
+          <button id="btnClearData" class="btn btn-danger btn-sm">清空全部数据</button>
+        </div>
+        <p class="hint">「恢复示例案例」会重新载入预置的 B2B 市场经理演示数据（覆盖当前内容，建议先导出备份）。</p>
+        <hr>
+        <h4>关于</h4>
+        <div class="about-rows">
+          <div class="about-row"><span>工具名称</span><b>AI Sourcing Buddy</b></div>
+          <div class="about-row"><span>版本</span><b>v6.0</b></div>
+          <div class="about-row"><span>制作人</span><b id="aboutMaker">Zhang Yanning</b></div>
+        </div>
+        <p class="hint">面向非技术岗位的招聘寻源工作台。数据仅保存在本机浏览器中，不上传任何服务器；断网可用。</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-primary" data-close="modalSettings">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="lib/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
